@@ -1,0 +1,53 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: order-service      # ← deve estar aqui dentro do spring:	
+  datasource:
+    url: jdbc:postgresql://localhost:5433/ordersdb
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+  jpa:
+    hibernate:
+      ddl-auto: update       # Em produção use 'validate' + Flyway/Liquibase
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Configuração RabbitMQ
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+# Configurações da aplicação
+app:
+  rabbitmq:
+    exchange: orders.exchange
+    queue: orders.queue
+    routing-key: orders.created
+  jwt:
+    secret: minha-chave-secreta-super-segura-para-jwt-trocar-em-producao
+    expiration: 86400000  # 24 horas em ms
+
+# Swagger
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /api-docs
+eureka:                          # ← bloco eureka no nível raiz, correto
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true

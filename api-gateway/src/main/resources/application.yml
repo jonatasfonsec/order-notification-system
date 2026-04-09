@@ -1,0 +1,48 @@
+server:
+  port: 8080  # Única porta exposta ao mundo externo
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        # Rota para o order-service
+        # lb:// = load balancer via Eureka (descobre o serviço pelo nome)
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/**, /api/auth/**
+          filters:
+            - StripPrefix=0
+
+        # Rota para o Swagger do order-service (útil em dev)
+        - id: order-service-docs
+          uri: lb://order-service
+          predicates:
+            - Path=/swagger-ui/**, /api-docs/**
+
+      # Habilita descoberta automática de serviços via Eureka
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+# Registra o Gateway no Eureka
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# Logs úteis para entender o roteamento
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+
+# Como usar:
+# Em vez de chamar http://localhost:8081/api/orders  (order-service direto)
+# O cliente chama http://localhost:8080/api/orders   (pelo Gateway)
+# O Gateway resolve o endereço real via Eureka

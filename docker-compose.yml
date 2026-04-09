@@ -1,0 +1,41 @@
+version: '3.8'
+
+# ─── Ordem de inicialização recomendada ───────────────────────
+# 1. docker-compose up -d                       (infra)
+# 2. mvn spring-boot:run (eureka-server)        porta 8761
+# 3. mvn spring-boot:run (order-service)        porta 8081
+# 4. mvn spring-boot:run (notification-service) porta 8082
+# 5. mvn spring-boot:run (api-gateway)          porta 8080
+#
+# Acesse tudo pelo Gateway: http://localhost:8080
+# Dashboard Eureka:         http://localhost:8761
+# Dashboard RabbitMQ:       http://localhost:15672
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: ordersdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # Porta AMQP (aplicação)
+      - "15672:15672"  # Painel de administração web
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
