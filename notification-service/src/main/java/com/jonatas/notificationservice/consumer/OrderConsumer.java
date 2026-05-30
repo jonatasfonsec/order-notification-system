@@ -3,7 +3,7 @@ package com.jonatas.notificationservice.consumer;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -21,7 +21,7 @@ public class OrderConsumer {
      * Em produção, aqui você enviaria um e-mail real (ex: Spring Mail + Thymeleaf)
      * ou integração com serviços como SendGrid, AWS SES, etc.
      */
-    @RabbitListener(queues = "${app.rabbitmq.queue}")
+    @KafkaListener(topics = "${app.kafka.topic}", groupId = "notification-group")
     public void receiveOrderEvent(OrderEvent event) {
         log.info("=== NOVO PEDIDO RECEBIDO ===");
         log.info("ID do Pedido: {}", event.getOrderId());

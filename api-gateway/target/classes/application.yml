@@ -21,7 +21,7 @@ spring:
         - id: order-service-docs
           uri: lb://order-service
           predicates:
-            - Path=/swagger-ui/**, /api-docs/**
+            - Path=/swagger-ui/**, /api-docs/**, /webjars/**
 
       # Habilita descoberta automática de serviços via Eureka
       discovery:

@@ -5,7 +5,7 @@
 ![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square&logo=openjdk)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2-green?style=flat-square&logo=springboot)
 ![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2023.0-green?style=flat-square&logo=spring)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-3.x-orange?style=flat-square&logo=rabbitmq)
+![Kafka](https://img.shields.io/badge/Kafka-3.x-black?style=flat-square&logo=apachekafka)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=flat-square&logo=postgresql)
 ![JWT](https://img.shields.io/badge/JWT-Auth-black?style=flat-square&logo=jsonwebtokens)
 
@@ -15,7 +15,7 @@
 
 Este projeto foi desenvolvido como portfólio pessoal com o objetivo de demonstrar na prática o uso de tecnologias amplamente adotadas no mercado de desenvolvimento backend Java.
 
-O sistema simula um fluxo real de e-commerce: ao criar um pedido via API REST, um evento é publicado de forma assíncrona no **RabbitMQ**, que é consumido pelo serviço de notificações — o qual poderia enviar um e-mail, SMS ou qualquer outro tipo de notificação ao cliente.
+O sistema simula um fluxo real de e-commerce: ao criar um pedido via API REST, um evento é publicado de forma assíncrona no **Kafka**, que é consumido pelo serviço de notificações — o qual poderia enviar um e-mail, SMS ou qualquer outro tipo de notificação ao cliente.
 
 ---
 
@@ -36,8 +36,8 @@ O sistema simula um fluxo real de e-commerce: ao criar um pedido via API REST, u
          └────────┬────────┘      └─────────▲───────────┘
                   │                         │
                   │    ┌────────────────┐   │
-                  └───▶│   RabbitMQ     ├───┘
-                       │  orders.queue  │
+                  └───▶│     Kafka      ├───┘
+                       │ orders.created │
                        └───────┬────────┘
                   ┌────────────┘
                   ▼
@@ -55,7 +55,7 @@ O sistema simula um fluxo real de e-commerce: ao criar um pedido via API REST, u
 |---|---|---|
 | API Gateway | Spring Cloud Gateway | Ponto único de entrada, roteamento |
 | Service Discovery | Netflix Eureka | Registro e descoberta de serviços |
-| Mensageria | RabbitMQ + Spring AMQP | Comunicação assíncrona entre serviços |
+| Mensageria | Kafka + Spring Kafka | Comunicação assíncrona entre serviços |
 | REST API | Spring Web | Endpoints RESTful |
 | Persistência | Spring Data JPA + PostgreSQL | ORM e banco relacional |
 | Segurança | Spring Security + JWT | Autenticação stateless |
@@ -77,12 +77,12 @@ order-notification-system/
 │   ├── repository/           # Acesso ao banco
 │   ├── model/                # Entidades JPA
 │   ├── dto/                  # Objetos de transferência
-│   ├── messaging/            # Producer RabbitMQ
-│   └── config/               # Security, JWT, RabbitMQ
+│   ├── messaging/            # Producer Kafka
+│   └── config/               # Security, JWT, Kafka
 ├── notification-service/     # Serviço de notificações (Consumer)
-│   ├── consumer/             # Consumer RabbitMQ
-│   └── config/               # Configuração RabbitMQ
-└── docker-compose.yml        # PostgreSQL + RabbitMQ
+│   ├── consumer/             # Consumer Kafka
+│   └── config/               # Configuração Kafka
+└── docker-compose.yml        # PostgreSQL + Kafka
 ```
 
 ---
@@ -93,25 +93,17 @@ order-notification-system/
 
 - Java 17+
 - Maven 3.8+
-- PostgreSQL instalado e rodando na porta 5432
-- RabbitMQ instalado com o plugin `rabbitmq_management` habilitado
+- Docker e Docker Compose
 
-### 1. Configurar o banco de dados
-
-Crie o banco no PostgreSQL:
-```sql
-CREATE DATABASE ordersdb;
-```
-
-### 2. Habilitar o painel do RabbitMQ (caso não tenha feito)
+### 1. Subir a infraestrutura
 
 ```bash
-rabbitmq-plugins enable rabbitmq_management
-rabbitmq-service stop
-rabbitmq-service start
+docker-compose up -d
 ```
 
-### 3. Iniciar os serviços (nesta ordem)
+Isso sobe o PostgreSQL, Kafka, Zookeeper e o Kafka UI automaticamente. O tópico `orders.created` é criado automaticamente na primeira mensagem.
+
+### 2. Iniciar os serviços (nesta ordem)
 
 ```bash
 # Terminal 1 — Service Discovery
@@ -127,13 +119,13 @@ cd notification-service && mvn spring-boot:run
 cd api-gateway && mvn spring-boot:run
 ```
 
-### 4. Acessar
+### 3. Acessar
 
 | URL | Descrição |
 |---|---|
-| http://localhost:8080/swagger-ui.html | Documentação Swagger |
+| http://localhost:8080/swagger-ui/index.html | Documentação Swagger |
 | http://localhost:8761 | Dashboard Eureka |
-| http://localhost:15672 | Dashboard RabbitMQ (guest/guest) |
+| http://localhost:8090 | Dashboard Kafka UI |
 
 ---
 
@@ -187,6 +179,8 @@ PATCH  /api/orders/{id}/status?status=CONFIRMED  # Atualizar status
 
 Todos os endpoints de pedidos requerem o token JWT no header `Authorization`.
 
+> **Dica:** No Swagger, clique no botão **Authorize** (cadeado) no canto superior direito e cole o token sem o prefixo `Bearer` — ele é adicionado automaticamente.
+
 ---
 
 ## 🔄 Fluxo de mensageria
@@ -194,8 +188,8 @@ Todos os endpoints de pedidos requerem o token JWT no header `Authorization`.
 ```
 1. Cliente faz POST /api/orders via Gateway
 2. order-service valida JWT e salva pedido no PostgreSQL
-3. OrderProducer publica OrderEvent no exchange orders.exchange
-4. RabbitMQ roteia via routing key orders.created → orders.queue
+3. OrderProducer publica OrderEvent no tópico orders.created
+4. Kafka entrega a mensagem para o consumer do grupo notification-group
 5. notification-service consome a mensagem
 6. Notificação é processada (log / e-mail / SMS)
 ```
@@ -214,7 +208,7 @@ mvn test
 ## 💡 Próximos passos
 
 - [ ] Envio real de e-mails com Spring Mail
-- [ ] Dead Letter Queue (DLQ) para mensagens com falha
+- [ ] Dead Letter Topic (DLT) para mensagens com falha
 - [ ] Versionamento do banco com Flyway
 - [ ] Containerização com Dockerfile
 - [ ] Testes de integração com Testcontainers
