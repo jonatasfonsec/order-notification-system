@@ -36,7 +36,7 @@ O sistema simula um fluxo real de e-commerce: ao criar um pedido via API REST, u
          └────────┬────────┘      └─────────▲───────────┘
                   │                         │
                   │    ┌────────────────┐   │
-                  └───▶│   RabbitMQ     ├───┘
+                  └──▶│   RabbitMQ      ├───┘
                        │  orders.queue  │
                        └───────┬────────┘
                   ┌────────────┘
@@ -131,7 +131,7 @@ cd api-gateway && mvn spring-boot:run
 
 | URL | Descrição |
 |---|---|
-| http://localhost:8080/swagger-ui.html | Documentação Swagger |
+| http://localhost:8080/swagger-ui/index.html | Documentação Swagger | 
 | http://localhost:8761 | Dashboard Eureka |
 | http://localhost:15672 | Dashboard RabbitMQ (guest/guest) |
 
